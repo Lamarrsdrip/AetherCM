@@ -1,0 +1,7 @@
+'use client'
+import Link from 'next/link'
+import Logo from '@/components/Logo'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+export default function Login(){const r=useRouter(); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [err,setErr]=useState(''); async function go(e:React.FormEvent){e.preventDefault(); const res=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,password})}); const d=await res.json(); if(!res.ok)return setErr(d.error||'Unable to sign in'); r.push(d.role==='admin'?'/admin':'/dashboard')}
+return <div className="authPage"><Link href="/"><Logo/></Link><form className="authCard" onSubmit={go}><span className="eyebrow">Welcome back</span><h1>Log in to Aether.</h1><p>Access your investing workspace.</p><label>Email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required/></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>{err&&<div className="formError">{err}</div>}<button className="solidBtn" type="submit">Log in</button><small>Prototype admin: use the credentials from your environment variables.</small><div className="authFoot">New to Aether? <Link href="/register">Open an account</Link></div></form></div>}
