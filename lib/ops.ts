@@ -9,7 +9,7 @@ export type ShareControl={
 export type HoldingView={id:string;symbol:string;name:string;shares:number;costBasis:number;entryPrice:number;currentPrice:number;previousPrice:number;marketCap:number;currentValue:number;pnl:number;pnlPct:number;dayPnl:number;dayPct:number}
 export type CryptoDepositAddress={id:string;asset:string;network:string;address:string;enabled:boolean;minDeposit:number;confirmationsLabel:string}
 export type ManualCryptoGateway={enabled:boolean;primaryAsset:string;paymentWindowMinutes:number;instructions:string;addresses:CryptoDepositAddress[]}
-export type FundingMethod={id:'crypto'|'wire'|'paypal';enabled:boolean;label:string;instructions:string;primary:boolean}
+export type FundingMethod={id:'crypto'|'wire'|'paypal';enabled:boolean;label:string;instructions:string;primary:boolean;paypalTag?:string;paymentLink?:string;bankName?:string;beneficiary?:string;accountNumber?:string;swift?:string;routing?:string;bankAddress?:string}
 export type TransferRequest={id:string;userId:string;userName:string;direction:'Deposit'|'Withdrawal';method:'crypto'|'wire'|'paypal';asset?:string;network?:string;amount:number;reference:string;destination?:string;depositAddress?:string;expiresAt?:string;status:'Pending'|'Approved'|'Rejected'|'Completed'|'Expired';createdAt:string}
 export type HomeOffer={id:string;kicker:string;title:string;body:string;cta:string;href:string}
 export type SiteContent={
@@ -73,6 +73,6 @@ export const initialCryptoGateway:ManualCryptoGateway={enabled:true,primaryAsset
  {id:'CR-4',asset:'BTC',network:'Bitcoin',address:'ADMIN_SET_BTC_ADDRESS',enabled:true,minDeposit:100,confirmationsLabel:'Manual verification'}]}
 export const initialFundingMethods:FundingMethod[]=[
  {id:'crypto',enabled:true,label:'Crypto',primary:true,instructions:'Manual crypto gateway'},
- {id:'wire',enabled:true,label:'International bank transfer',primary:false,instructions:'Bank: ADMIN_SET_REQUIRED · SWIFT: ADMIN_SET_REQUIRED · Beneficiary: Aether Capital Markets'},
- {id:'paypal',enabled:true,label:'PayPal',primary:false,instructions:'PayPal tag: @ADMIN_SET_REQUIRED'}]
+ {id:'wire',enabled:true,label:'International bank transfer',primary:false,instructions:'Use your Aether account ID as the payment reference. Submit the transfer reference after sending.',bankName:'',beneficiary:'Aether Capital Markets',accountNumber:'',swift:'',routing:'',bankAddress:''},
+ {id:'paypal',enabled:true,label:'PayPal',primary:false,instructions:'Send payment using the PayPal details below, then submit the transaction ID for review.',paypalTag:'',paymentLink:''}]
 export const initialTransfers:TransferRequest[]=[]

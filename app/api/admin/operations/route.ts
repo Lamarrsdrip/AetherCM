@@ -1,14 +1,69 @@
-import{NextResponse}from'next/server';import{getStore,sweepExpiredCryptoRequests}from'@/lib/store'
-export async function GET(){sweepExpiredCryptoRequests();return NextResponse.json(getStore())}
-export async function POST(req:Request){const b=await req.json(),s=getStore()
- if(b.action==='allocation-status')s.allocations=s.allocations.map(a=>a.id===b.id?{...a,status:b.status}:a)
- if(b.action==='transfer-status')s.transfers=s.transfers.map(t=>t.id===b.id?{...t,status:b.status}:t)
- if(b.action==='adjust-balance'){const amount=Number(b.amount||0);if(!amount)return NextResponse.json({error:'Enter a non-zero amount.'},{status:400});s.adjustments.unshift({id:`ADJ-${Date.now()}`,userId:b.userId,userName:b.userName,amount,kind:amount>0?'Credit':'Debit',note:String(b.note||'Admin account adjustment'),createdAt:new Date().toLocaleString()})}
- if(b.action==='daily-gain')s.dailyGain={...s.dailyGain,...b.rule,value:b.rule?.value===undefined?s.dailyGain.value:Number(b.rule.value)}
- if(b.action==='share-control')s.shareControls=s.shareControls.map(x=>{if(x.symbol!==b.symbol)return x;const p={...b.patch};if(p.manualPrice!==undefined){p.previousPrice=x.manualPrice;p.manualPrice=Number(p.manualPrice)}if(p.marketCap!==undefined)p.marketCap=Number(p.marketCap);return{...x,...p}})
- if(b.action==='funding-method')s.fundingMethods=s.fundingMethods.map(x=>x.id===b.id?{...x,...b.patch}:x)
- if(b.action==='crypto-gateway')s.cryptoGateway={...s.cryptoGateway,...b.patch,paymentWindowMinutes:b.patch?.paymentWindowMinutes===undefined?s.cryptoGateway.paymentWindowMinutes:Number(b.patch.paymentWindowMinutes)}
- if(b.action==='crypto-address')s.cryptoGateway.addresses=s.cryptoGateway.addresses.map(x=>x.id===b.id?{...x,...b.patch,minDeposit:b.patch?.minDeposit===undefined?x.minDeposit:Number(b.patch.minDeposit)}:x)
- if(b.action==='site-content')s.siteContent={...s.siteContent,...b.patch,offers:b.patch?.offers||s.siteContent.offers}
- return NextResponse.json(s)
+import { NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
+import { assertTrustedOrigin, cleanText } from '@/lib/security'
+import { loadState, saveState, sweepExpiredCryptoRequests, accountById } from '@/lib/store'
+import { createNotice } from '@/lib/notify'
+
+async function admin(){
+  const s=await getSession()
+  return s?.role==='admin'
+}
+
+export async function GET(){
+  if(!await admin())return NextResponse.json({error:'Administrator access required.'},{status:401})
+  const state=await loadState()
+  if(sweepExpiredCryptoRequests(state))await saveState(state)
+  return NextResponse.json(state)
+}
+
+export async function POST(req:Request){
+  if(!await admin())return NextResponse.json({error:'Administrator access required.'},{status:401})
+  try{assertTrustedOrigin(req)}catch{return NextResponse.json({error:'Please refresh and try again.'},{status:403})}
+  const b=await req.json().catch(()=>({})),state=await loadState()
+  let notice:{userId:string;title:string;body:string;href:string;email?:string}|null=null
+
+  if(b.action==='allocation-status'){
+    const found=state.allocations.find(a=>a.id===b.id)
+    if(found){
+      found.status=b.status
+      const account=accountById(state,found.userId)
+      notice={userId:found.userId,title:`Investment request ${String(b.status).toLowerCase()}`,body:`Your ${found.symbol} investment request is now ${String(b.status).toLowerCase()}.`,href:'/portfolio',email:account?.email}
+    }
+  }
+  if(b.action==='transfer-status'){
+    const found=state.transfers.find(t=>t.id===b.id)
+    if(found){
+      found.status=b.status
+      const account=accountById(state,found.userId)
+      notice={userId:found.userId,title:`${found.direction} ${String(b.status).toLowerCase()}`,body:`Your ${found.direction.toLowerCase()} request for $${found.amount.toLocaleString()} is now ${String(b.status).toLowerCase()}.`,href:'/transfers',email:account?.email}
+    }
+  }
+  if(b.action==='adjust-balance'){
+    const amount=Number(b.amount||0)
+    if(!Number.isFinite(amount)||amount===0)return NextResponse.json({error:'Enter a non-zero amount.'},{status:400})
+    const account=accountById(state,b.userId)
+    if(!account)return NextResponse.json({error:'Client account not found.'},{status:404})
+    state.adjustments.unshift({id:`ADJ-${Date.now()}`,userId:account.id,userName:account.name,amount,kind:amount>0?'Credit':'Debit',note:cleanText(b.note,180)||'Account adjustment',createdAt:new Date().toISOString()})
+    notice={userId:account.id,title:'Account balance updated',body:`Your account balance has been updated by ${amount>0?'+':''}$${Math.abs(amount).toLocaleString()}.`,href:'/dashboard',email:account.email}
+  }
+  if(b.action==='daily-gain'){
+    state.dailyGain={...state.dailyGain,...b.rule,value:b.rule?.value===undefined?state.dailyGain.value:Number(b.rule.value)}
+  }
+  if(b.action==='share-control'){
+    state.shareControls=state.shareControls.map(x=>{
+      if(x.symbol!==b.symbol)return x
+      const p={...b.patch}
+      if(p.manualPrice!==undefined){p.previousPrice=x.manualPrice;p.manualPrice=Number(p.manualPrice)}
+      if(p.marketCap!==undefined)p.marketCap=Number(p.marketCap)
+      return {...x,...p}
+    })
+  }
+  if(b.action==='funding-method')state.fundingMethods=state.fundingMethods.map(x=>x.id===b.id?{...x,...b.patch}:x)
+  if(b.action==='crypto-gateway')state.cryptoGateway={...state.cryptoGateway,...b.patch,paymentWindowMinutes:b.patch?.paymentWindowMinutes===undefined?state.cryptoGateway.paymentWindowMinutes:Number(b.patch.paymentWindowMinutes)}
+  if(b.action==='crypto-address')state.cryptoGateway.addresses=state.cryptoGateway.addresses.map(x=>x.id===b.id?{...x,...b.patch,minDeposit:b.patch?.minDeposit===undefined?x.minDeposit:Number(b.patch.minDeposit)}:x)
+  if(b.action==='site-content')state.siteContent={...state.siteContent,...b.patch,offers:b.patch?.offers||state.siteContent.offers}
+
+  await saveState(state)
+  if(notice)await createNotice(notice).catch(()=>{})
+  return NextResponse.json(state)
 }
