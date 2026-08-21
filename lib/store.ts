@@ -1,73 +1,17 @@
 import {
-  initialAdjustments,initialAllocations,initialDailyGain,initialShareControls,
-  initialFundingMethods,initialTransfers,initialCryptoGateway,demoClient,
-  type AccountAdjustment,type DailyGainRule,type ShareAllocation,type ShareControl,
-  type FundingMethod,type TransferRequest,type ManualCryptoGateway
+ initialAccounts,initialAdjustments,initialAllocations,initialDailyGain,initialShareControls,initialFundingMethods,initialTransfers,initialCryptoGateway,initialSiteContent,
+ type Account,type AccountAdjustment,type DailyGainRule,type ShareAllocation,type ShareControl,type FundingMethod,type TransferRequest,type ManualCryptoGateway,type HoldingView,type SiteContent
 } from './ops'
-
-type Store={
-  allocations:ShareAllocation[]; adjustments:AccountAdjustment[]; dailyGain:DailyGainRule;
-  shareControls:ShareControl[]; fundingMethods:FundingMethod[]; transfers:TransferRequest[];
-  cryptoGateway:ManualCryptoGateway; lastAccrualDate:string|null
-}
-declare global { var __aetherStore:Store|undefined }
-
-export function getStore():Store{
-  if(!globalThis.__aetherStore){
-    globalThis.__aetherStore={
-      allocations:initialAllocations.map(x=>({...x})),
-      adjustments:initialAdjustments.map(x=>({...x})),
-      dailyGain:{...initialDailyGain},
-      shareControls:initialShareControls.map(x=>({...x})),
-      fundingMethods:initialFundingMethods.map(x=>({...x})),
-      transfers:initialTransfers.map(x=>({...x})),
-      cryptoGateway:{...initialCryptoGateway,addresses:initialCryptoGateway.addresses.map(x=>({...x}))},
-      lastAccrualDate:null
-    }
-  }
-  return globalThis.__aetherStore
-}
-
-export function sweepExpiredCryptoRequests(){
-  const s=getStore(); const now=Date.now()
-  s.transfers=s.transfers.map(t=>{
-    if(t.method==='crypto'&&t.direction==='Deposit'&&t.status==='Pending'&&t.expiresAt&&new Date(t.expiresAt).getTime()<now){
-      return {...t,status:'Expired' as const}
-    }
-    return t
-  })
-}
-
-export function clientBalance(userId=demoClient.id){
-  const s=getStore()
-  const adjustments=s.adjustments.filter(a=>a.userId===userId).reduce((n,a)=>n+a.amount,0)
-  const completedDeposits=s.transfers.filter(t=>t.userId===userId&&t.direction==='Deposit'&&t.status==='Completed').reduce((n,t)=>n+t.amount,0)
-  const completedWithdrawals=s.transfers.filter(t=>t.userId===userId&&t.direction==='Withdrawal'&&t.status==='Completed').reduce((n,t)=>n+t.amount,0)
-  return demoClient.baseBalance+adjustments+completedDeposits-completedWithdrawals
-}
-
-export function applyDailyAccrualIfDue(){
-  const s=getStore(); if(!s.dailyGain.enabled) return s
-  const today=new Date().toISOString().slice(0,10); if(s.lastAccrualDate===today) return s
-  const current=clientBalance()
-  const amount=s.dailyGain.mode==='percent'?current*(s.dailyGain.value/100):s.dailyGain.value
-  if(Number.isFinite(amount)&&amount!==0){
-    s.adjustments.unshift({
-      id:`AUTO-${Date.now()}`,userId:demoClient.id,userName:demoClient.name,
-      amount:Number(amount.toFixed(2)),kind:'Scheduled daily gain',
-      note:s.dailyGain.label,createdAt:new Date().toLocaleString()
-    })
-  }
-  s.lastAccrualDate=today
-  return s
-}
-
-export function clientSnapshot(){
-  sweepExpiredCryptoRequests()
-  const s=applyDailyAccrualIfDue()
-  const balance=clientBalance()
-  const daily=s.adjustments.filter(a=>a.userId===demoClient.id&&a.kind==='Scheduled daily gain').slice(0,7)
-  const approved=s.allocations.filter(a=>a.userId===demoClient.id&&a.status==='Approved')
-  const invested=approved.reduce((n,a)=>n+a.value,0)
-  return {balance,invested,available:Math.max(0,balance-invested),daily,approved}
-}
+type Store={accounts:Account[];allocations:ShareAllocation[];adjustments:AccountAdjustment[];dailyGain:DailyGainRule;shareControls:ShareControl[];fundingMethods:FundingMethod[];transfers:TransferRequest[];cryptoGateway:ManualCryptoGateway;siteContent:SiteContent;lastAccrualDateByUser:Record<string,string>}
+declare global{var __aetherStore:Store|undefined}
+function idFromEmail(email:string){let h=2166136261;for(const c of email.toLowerCase()){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return`AC-${String(Math.abs(h>>>0)).slice(0,8).padStart(8,'0')}`}
+function nameFromEmail(email:string){const raw=email.split('@')[0].replace(/[._-]+/g,' ').trim();return raw?raw.replace(/\b\w/g,c=>c.toUpperCase()):'Aether Client'}
+export function getStore():Store{if(!globalThis.__aetherStore)globalThis.__aetherStore={accounts:initialAccounts.map(x=>({...x})),allocations:[],adjustments:[],dailyGain:{...initialDailyGain},shareControls:initialShareControls.map(x=>({...x})),fundingMethods:initialFundingMethods.map(x=>({...x})),transfers:[],cryptoGateway:{...initialCryptoGateway,addresses:initialCryptoGateway.addresses.map(x=>({...x}))},siteContent:{...initialSiteContent,offers:initialSiteContent.offers.map(x=>({...x}))},lastAccrualDateByUser:{}};return globalThis.__aetherStore}
+export function ensureAccount(email:string){const clean=email.trim().toLowerCase(),s=getStore();let a=s.accounts.find(x=>x.email===clean);if(!a){a={id:idFromEmail(clean),email:clean,name:nameFromEmail(clean),createdAt:new Date().toISOString(),status:'ACTIVE'};s.accounts.push(a)}return a}
+export function sweepExpiredCryptoRequests(){const s=getStore(),now=Date.now();s.transfers=s.transfers.map(t=>t.method==='crypto'&&t.direction==='Deposit'&&t.status==='Pending'&&t.expiresAt&&new Date(t.expiresAt).getTime()<now?{...t,status:'Expired' as const}:t)}
+function ledgerCash(userId:string){const s=getStore();return s.adjustments.filter(a=>a.userId===userId).reduce((n,a)=>n+a.amount,0)+s.transfers.filter(t=>t.userId===userId&&t.direction==='Deposit'&&t.status==='Completed').reduce((n,t)=>n+t.amount,0)-s.transfers.filter(t=>t.userId===userId&&t.direction==='Withdrawal'&&t.status==='Completed').reduce((n,t)=>n+t.amount,0)}
+export function holdingsFor(userId:string):HoldingView[]{const s=getStore();return s.allocations.filter(a=>a.userId===userId&&a.status==='Approved').map(a=>{const q=s.shareControls.find(x=>x.symbol===a.symbol),currentPrice=q?.manualPrice??a.price,previousPrice=q?.previousPrice??currentPrice,currentValue=a.shares*currentPrice,pnl=currentValue-a.requestedAmount,pnlPct=a.requestedAmount?pnl/a.requestedAmount*100:0,dayPnl=a.shares*(currentPrice-previousPrice),dayPct=previousPrice?(currentPrice-previousPrice)/previousPrice*100:0;return{id:a.id,symbol:a.symbol,name:a.name,shares:a.shares,costBasis:a.requestedAmount,entryPrice:a.price,currentPrice,previousPrice,marketCap:q?.marketCap||0,currentValue,pnl,pnlPct,dayPnl,dayPct}})}
+export function accountSnapshotByUser(userId:string){const h=holdingsFor(userId),fundedCash=ledgerCash(userId),investedCost=h.reduce((n,x)=>n+x.costBasis,0),invested=h.reduce((n,x)=>n+x.currentValue,0),unrealizedPnl=h.reduce((n,x)=>n+x.pnl,0),dayPnl=h.reduce((n,x)=>n+x.dayPnl,0),available=Math.max(0,fundedCash-investedCost);return{balance:available+invested,available,invested,investedCost,unrealizedPnl,dayPnl,holdings:h}}
+export function accountSnapshot(email:string){const account=ensureAccount(email);return{...accountSnapshotByUser(account.id),account}}
+export function availableToAllocate(userId:string){const s=getStore(),snap=accountSnapshotByUser(userId),pending=s.allocations.filter(a=>a.userId===userId&&a.status==='Pending').reduce((n,a)=>n+a.requestedAmount,0);return Math.max(0,snap.available-pending)}
+export function applyDailyAccrualIfDue(userId:string,userName:string){const s=getStore();if(!s.dailyGain.enabled)return s;const today=new Date().toISOString().slice(0,10);if(s.lastAccrualDateByUser[userId]===today)return s;const snap=accountSnapshotByUser(userId),amount=s.dailyGain.mode==='percent'?snap.balance*(s.dailyGain.value/100):s.dailyGain.value;if(Number.isFinite(amount)&&amount!==0&&snap.balance>0)s.adjustments.unshift({id:`AUTO-${Date.now()}-${userId}`,userId,userName,amount:Number(amount.toFixed(2)),kind:'Scheduled daily gain',note:s.dailyGain.label,createdAt:new Date().toLocaleString()});s.lastAccrualDateByUser[userId]=today;return s}

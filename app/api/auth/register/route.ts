@@ -1,2 +1,3 @@
-import { NextResponse } from 'next/server'
-export async function POST(req:Request){const {email}=await req.json(); if(!email)return NextResponse.json({error:'Email is required'},{status:400}); const res=NextResponse.json({ok:true}); res.cookies.set('aether_role','client',{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/'}); res.cookies.set('aether_email',email,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/'}); return res}
+import {NextResponse} from 'next/server'
+import {ensureAccount} from '@/lib/store'
+export async function POST(req:Request){const{email}=await req.json();if(!email)return NextResponse.json({error:'Email is required'},{status:400});const clean=String(email).trim().toLowerCase();ensureAccount(clean);const res=NextResponse.json({ok:true});res.cookies.set('aether_role','client',{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:60*60*24*7});res.cookies.set('aether_email',clean,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:60*60*24*7});return res}

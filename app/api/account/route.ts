@@ -1,3 +1,2 @@
-import {NextResponse} from 'next/server'
-import {clientSnapshot,getStore} from '@/lib/store'
-export async function GET(){const s=getStore();return NextResponse.json({...clientSnapshot(),allocations:s.allocations.filter(x=>x.userId==='AC-20491'),transfers:s.transfers.filter(x=>x.userId==='AC-20491')})}
+import {NextResponse} from 'next/server';import{getSession}from'@/lib/auth';import{accountSnapshot,applyDailyAccrualIfDue,getStore}from'@/lib/store'
+export async function GET(){const session=await getSession();if(!session?.email)return NextResponse.json({error:'Unauthorized'},{status:401});let snap=accountSnapshot(session.email);applyDailyAccrualIfDue(snap.account.id,snap.account.name);snap=accountSnapshot(session.email);const s=getStore(),daily=s.adjustments.filter(a=>a.userId===snap.account.id&&a.kind==='Scheduled daily gain').slice(0,7);return NextResponse.json({...snap,daily,allocations:s.allocations.filter(x=>x.userId===snap.account.id),transfers:s.transfers.filter(x=>x.userId===snap.account.id)})}
