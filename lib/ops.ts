@@ -39,7 +39,14 @@ export const initialShareControls:ShareControl[]=[
  {symbol:'AMD',name:'AMD',enabled:true,manualPrice:178.24,previousPrice:175.90,marketCap:289000000000,allocationCapPct:20,minAmount:100,maxAmount:50000,maxShares:300,approvalRequired:true},
  {symbol:'COST',name:'Costco',enabled:true,manualPrice:980.35,previousPrice:972.40,marketCap:435000000000,allocationCapPct:20,minAmount:100,maxAmount:50000,maxShares:100,approvalRequired:true},
  {symbol:'SPY',name:'SPDR S&P 500 ETF',enabled:true,manualPrice:649.28,previousPrice:646.17,marketCap:690000000000,allocationCapPct:45,minAmount:100,maxAmount:100000,maxShares:500,approvalRequired:true},
- {symbol:'QQQ',name:'Invesco QQQ',enabled:true,manualPrice:582.14,previousPrice:578.90,marketCap:360000000000,allocationCapPct:35,minAmount:100,maxAmount:100000,maxShares:400,approvalRequired:true}
+ {symbol:'QQQ',name:'Invesco QQQ',enabled:true,manualPrice:582.14,previousPrice:578.90,marketCap:360000000000,allocationCapPct:35,minAmount:100,maxAmount:100000,maxShares:400,approvalRequired:true},
+ {symbol:'DFAI',name:'Dimensional International Core Equity 2 ETF',enabled:true,manualPrice:34.50,previousPrice:34.20,marketCap:0,allocationCapPct:30,minAmount:100,maxAmount:100000,maxShares:2000,approvalRequired:true},
+ {symbol:'VTI',name:'Vanguard Total Stock Market ETF',enabled:true,manualPrice:332.00,previousPrice:329.50,marketCap:0,allocationCapPct:50,minAmount:100,maxAmount:150000,maxShares:1000,approvalRequired:true},
+ {symbol:'VOO',name:'Vanguard S&P 500 ETF',enabled:true,manualPrice:595.00,previousPrice:591.50,marketCap:0,allocationCapPct:50,minAmount:100,maxAmount:150000,maxShares:800,approvalRequired:true},
+ {symbol:'IWM',name:'iShares Russell 2000 ETF',enabled:true,manualPrice:238.00,previousPrice:235.80,marketCap:0,allocationCapPct:35,minAmount:100,maxAmount:100000,maxShares:1000,approvalRequired:true},
+ {symbol:'SCHD',name:'Schwab U.S. Dividend Equity ETF',enabled:true,manualPrice:29.00,previousPrice:28.80,marketCap:0,allocationCapPct:40,minAmount:100,maxAmount:100000,maxShares:3000,approvalRequired:true},
+ {symbol:'VXUS',name:'Vanguard Total International Stock ETF',enabled:true,manualPrice:69.00,previousPrice:68.60,marketCap:0,allocationCapPct:40,minAmount:100,maxAmount:100000,maxShares:2000,approvalRequired:true},
+ {symbol:'DIA',name:'SPDR Dow Jones Industrial Average ETF Trust',enabled:true,manualPrice:455.00,previousPrice:451.90,marketCap:0,allocationCapPct:35,minAmount:100,maxAmount:100000,maxShares:800,approvalRequired:true},
 ]
 
 export const initialSiteContent:SiteContent={
