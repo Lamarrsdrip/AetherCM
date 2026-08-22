@@ -6,6 +6,9 @@ export type Account={
  notificationPreferences?:NotificationPreferences
 }
 export const defaultNotificationPreferences:NotificationPreferences={email:true,push:true,investmentUpdates:true,transferUpdates:true,supportReplies:true}
+
+export type EmailConfig={enabled:boolean;gmailAddress:string;appPassword:string;fromName:string}
+export const initialEmailConfig:EmailConfig={enabled:false,gmailAddress:'',appPassword:'',fromName:'Aether Capital Markets'}
 export type ShareAllocation={id:string;userId:string;userName:string;symbol:string;name:string;requestedAmount:number;shares:number;price:number;value:number;status:'Pending'|'Approved'|'Rejected';createdAt:string;approvedAt?:string;purchasedAt?:string}
 export type AdjustmentKind='Credit'|'Debit'|'Scheduled daily gain'|'Daily Profit'|'Daily Loss'|'Account Credit'|'Account Debit'
 export type AccountAdjustment={id:string;userId:string;userName:string;amount:number;kind:AdjustmentKind;note:string;createdAt:string}

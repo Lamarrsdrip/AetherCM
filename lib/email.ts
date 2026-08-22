@@ -1,9 +1,15 @@
 import nodemailer from 'nodemailer'
+import { loadState } from './store'
 
-export function emailStatus(){
+export async function emailStatus(){
+  const state=await loadState()
+  const gmail=Boolean(state.emailConfig.enabled && state.emailConfig.gmailAddress && state.emailConfig.appPassword)
+  if(gmail)return {configured:true,provider:'Gmail'}
   const resend=Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM)
+  if(resend)return {configured:true,provider:'Resend'}
   const smtp=Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && process.env.EMAIL_FROM)
-  return {configured:resend||smtp,provider:resend?'Resend':smtp?'SMTP':'Not connected'}
+  if(smtp)return {configured:true,provider:'SMTP'}
+  return {configured:false,provider:'Not connected'}
 }
 
 function esc(s:string){
@@ -11,9 +17,6 @@ function esc(s:string){
 }
 
 export async function sendEmail(opts:{to:string;subject:string;text:string;title?:string}){
-  const from=process.env.EMAIL_FROM
-  if(!from)return {sent:false,reason:'not-configured'}
-
   const html=`<!doctype html><html><body style="margin:0;background:#f5f7f5;font-family:Arial,sans-serif;color:#172019">
   <div style="max-width:620px;margin:0 auto;padding:34px 18px">
     <div style="font-size:22px;font-weight:700;margin-bottom:24px">Aether Capital Markets</div>
@@ -23,6 +26,25 @@ export async function sendEmail(opts:{to:string;subject:string;text:string;title
     </div>
     <p style="font-size:11px;color:#89938d;margin-top:20px">This message relates to your Aether account.</p>
   </div></body></html>`
+
+  const state=await loadState()
+  const gmail=state.emailConfig
+  if(gmail.enabled && gmail.gmailAddress && gmail.appPassword){
+    const from=`${gmail.fromName||'Aether Capital Markets'} <${gmail.gmailAddress}>`
+    try{
+      const transporter=nodemailer.createTransport({
+        host:'smtp.gmail.com',port:465,secure:true,
+        auth:{user:gmail.gmailAddress,pass:gmail.appPassword}
+      })
+      await transporter.sendMail({from,to:opts.to,subject:opts.subject,text:opts.text,html})
+      return {sent:true}
+    }catch(e:any){
+      return {sent:false,reason:`gmail-${e?.responseCode||e?.code||'error'}`}
+    }
+  }
+
+  const from=process.env.EMAIL_FROM
+  if(!from)return {sent:false,reason:'not-configured'}
 
   if(process.env.RESEND_API_KEY){
     const r=await fetch('https://api.resend.com/emails',{

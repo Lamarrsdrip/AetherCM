@@ -8,7 +8,7 @@ export async function GET(){
   if(session?.role!=='admin')return NextResponse.json({error:'Administrator access required.'},{status:401})
   return NextResponse.json({
     database:{connected:databaseConfigured()},
-    email:emailStatus(),
+    email:await emailStatus(),
     push:{configured:pushStatus().configured},
     install:{configured:true}
   })

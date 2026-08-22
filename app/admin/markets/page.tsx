@@ -9,7 +9,7 @@ const cap=(n:number)=>n>=1e12?`$${(n/1e12).toFixed(2)}T`:n>=1e9?`$${(n/1e9).toFi
 
 export default function MarketsAdmin(){
  const [ops,setOps]=useState<any>(null),[saved,setSaved]=useState(""),[query,setQuery]=useState(""),[filter,setFilter]=useState<Filter>("All")
- const [newSymbol,setNewSymbol]=useState(""),[newName,setNewName]=useState(""),[newType,setNewType]=useState<"Stock"|"ETF">("Stock"),[adding,setAdding]=useState(false),[addMsg,setAddMsg]=useState("")
+ const [newSymbol,setNewSymbol]=useState(""),[newName,setNewName]=useState(""),[newType,setNewType]=useState<"Stock"|"ETF">("Stock"),[newLogoUrl,setNewLogoUrl]=useState(""),[adding,setAdding]=useState(false),[addMsg,setAddMsg]=useState("")
  useEffect(()=>{fetch("/api/admin/operations").then(r=>r.json()).then(setOps)},[])
 
  const save=async(c:ShareControl)=>{
@@ -21,11 +21,11 @@ export default function MarketsAdmin(){
  const addAsset=async()=>{
   if(!newSymbol.trim()){setAddMsg("Enter a ticker symbol.");return}
   setAdding(true);setAddMsg("")
-  const r=await fetch("/api/admin/operations",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"add-market-asset",symbol:newSymbol,name:newName,assetType:newType})})
+  const r=await fetch("/api/admin/operations",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"add-market-asset",symbol:newSymbol,name:newName,assetType:newType,logoUrl:newLogoUrl})})
   const d=await r.json()
   setAdding(false)
   if(!r.ok){setAddMsg(d.error||"Could not add asset.");return}
-  setOps(d);setNewSymbol("");setNewName("");setAddMsg("Asset added — disabled until you finish configuring it below.")
+  setOps(d);setNewSymbol("");setNewName("");setNewLogoUrl("");setAddMsg("Asset added — disabled until you finish configuring it below.")
  }
 
  const filtered=useMemo(()=>{
@@ -45,7 +45,9 @@ export default function MarketsAdmin(){
    <label>Ticker symbol<input value={newSymbol} onChange={e=>setNewSymbol(e.target.value.toUpperCase())} placeholder="e.g. VUG"/></label>
    <label>Name<input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Full company or fund name"/></label>
    <label>Type<select value={newType} onChange={e=>setNewType(e.target.value as any)}><option value="Stock">Stock</option><option value="ETF">ETF</option></select></label>
+   <label>Logo URL (optional)<input value={newLogoUrl} onChange={e=>setNewLogoUrl(e.target.value)} placeholder="Leave blank to use the automatic logo"/></label>
   </div>
+  {(newSymbol||newLogoUrl)&&<div className="newAssetLogoPreviewV2"><AssetLogo symbol={newSymbol||"?"} logoUrl={newLogoUrl} assetType={newType}/><small>Logo preview</small></div>}
   <button className="saveActionV2" onClick={addAsset} disabled={adding}>{adding?"Adding…":"Add asset"}</button>
   {addMsg&&<div className="formInfo">{addMsg}</div>}
  </section>

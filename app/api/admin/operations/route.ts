@@ -14,7 +14,10 @@ export async function GET(){
   if(!await admin())return NextResponse.json({error:'Administrator access required.'},{status:401})
   const state=await loadState()
   if(sweepExpiredCryptoRequests(state))await saveState(state)
-  return NextResponse.json(state)
+  return NextResponse.json({
+    ...state,
+    emailConfig:{...state.emailConfig,appPassword:state.emailConfig.appPassword?'••••••••••••••••':''}
+  })
 }
 
 export async function POST(req:Request){
@@ -82,6 +85,17 @@ export async function POST(req:Request){
   if(b.action==='site-content')state.siteContent={...state.siteContent,...b.patch,offers:b.patch?.offers||state.siteContent.offers}
   if(b.action==='company-profile')state.companyProfile={...state.companyProfile,...b.patch}
   if(b.action==='social-links')state.socialLinks={...state.socialLinks,...b.patch}
+  if(b.action==='email-config'){
+    const patch=b.patch||{}
+    const newPassword=typeof patch.appPassword==='string' && patch.appPassword.trim() && !patch.appPassword.includes('•')
+      ? patch.appPassword.trim() : state.emailConfig.appPassword
+    state.emailConfig={
+      enabled:Boolean(patch.enabled),
+      gmailAddress:cleanText(patch.gmailAddress,190).toLowerCase(),
+      fromName:cleanText(patch.fromName,80)||'Aether Capital Markets',
+      appPassword:newPassword
+    }
+  }
   if(b.action==='add-market-asset'){
     const symbol=String(b.symbol||'').trim().toUpperCase()
     if(!symbol)return NextResponse.json({error:'Enter a ticker symbol.'},{status:400})
@@ -89,12 +103,16 @@ export async function POST(req:Request){
     const asset:ShareControl={
       symbol,name:cleanText(b.name,120)||symbol,enabled:false,manualPrice:0,previousPrice:0,marketCap:0,
       allocationCapPct:25,minAmount:100,maxAmount:50000,maxShares:1000,approvalRequired:true,
-      assetType:b.assetType==='ETF'?'ETF':'Stock',category:cleanText(b.category,80),description:cleanText(b.description,400)
+      assetType:b.assetType==='ETF'?'ETF':'Stock',category:cleanText(b.category,80),description:cleanText(b.description,400),
+      logoUrl:cleanText(b.logoUrl,500)||undefined
     }
     state.shareControls.push(asset)
   }
 
   await saveState(state)
   if(notice)await createNotice(notice).catch(()=>{})
-  return NextResponse.json(state)
+  return NextResponse.json({
+    ...state,
+    emailConfig:{...state.emailConfig,appPassword:state.emailConfig.appPassword?'••••••••••••••••':''}
+  })
 }

@@ -1,11 +1,11 @@
 import {
   initialAccounts, initialAdjustments, initialAllocations, initialDailyGain,
   initialShareControls, initialFundingMethods, initialTransfers,
-  initialCryptoGateway, initialSiteContent, initialCompanyProfile, initialSocialLinks,
+  initialCryptoGateway, initialSiteContent, initialCompanyProfile, initialSocialLinks, initialEmailConfig,
   type Account, type AccountAdjustment, type DailyGainRule,
   type ShareAllocation, type ShareControl, type FundingMethod,
   type TransferRequest, type ManualCryptoGateway, type HoldingView,
-  type SiteContent, type CompanyProfile, type SocialLinks, type DailyPerformanceEntry
+  type SiteContent, type CompanyProfile, type SocialLinks, type DailyPerformanceEntry, type EmailConfig
 } from './ops'
 import { getDb } from './db'
 
@@ -21,6 +21,7 @@ export type AppState = {
   siteContent: SiteContent
   companyProfile: CompanyProfile
   socialLinks: SocialLinks
+  emailConfig: EmailConfig
   lastAccrualDateByUser: Record<string,string>
   dailyOpeningBalance: Record<string,{date:string,balance:number}>
   dailyPerformanceHistory: DailyPerformanceEntry[]
@@ -47,6 +48,7 @@ function defaultState():AppState {
     siteContent: clone(initialSiteContent),
     companyProfile: clone(initialCompanyProfile),
     socialLinks: clone(initialSocialLinks),
+    emailConfig: clone(initialEmailConfig),
     lastAccrualDateByUser: {},
     dailyOpeningBalance: {},
     dailyPerformanceHistory: [],
@@ -83,6 +85,7 @@ function mergeState(raw?:Partial<AppState>|null):AppState {
     },
     companyProfile: {...base.companyProfile, ...(raw.companyProfile || {})},
     socialLinks: {...base.socialLinks, ...(raw.socialLinks || {})},
+    emailConfig: {...base.emailConfig, ...(raw.emailConfig || {})},
     lastAccrualDateByUser: raw.lastAccrualDateByUser || {},
     dailyOpeningBalance: raw.dailyOpeningBalance || {},
     dailyPerformanceHistory: raw.dailyPerformanceHistory || [],
