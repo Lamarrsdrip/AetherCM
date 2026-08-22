@@ -3,7 +3,7 @@ import { getSession } from '@/lib/auth'
 import { assertTrustedOrigin, cleanText } from '@/lib/security'
 import { loadState, saveState, sweepExpiredCryptoRequests, accountById, ensureDailyWindow, notifyFlags } from '@/lib/store'
 import { createNotice } from '@/lib/notify'
-import type { AdjustmentKind, ShareControl } from '@/lib/ops'
+import type { AdjustmentKind } from '@/lib/ops'
 
 async function admin(){
   const s=await getSession()
@@ -96,19 +96,6 @@ export async function POST(req:Request){
       appPassword:newPassword
     }
   }
-  if(b.action==='add-market-asset'){
-    const symbol=String(b.symbol||'').trim().toUpperCase()
-    if(!symbol)return NextResponse.json({error:'Enter a ticker symbol.'},{status:400})
-    if(state.shareControls.some(x=>x.symbol===symbol))return NextResponse.json({error:'That symbol already exists.'},{status:400})
-    const asset:ShareControl={
-      symbol,name:cleanText(b.name,120)||symbol,enabled:false,manualPrice:0,previousPrice:0,marketCap:0,
-      allocationCapPct:25,minAmount:100,maxAmount:50000,maxShares:1000,approvalRequired:true,
-      assetType:b.assetType==='ETF'?'ETF':'Stock',category:cleanText(b.category,80),description:cleanText(b.description,400),
-      logoUrl:cleanText(b.logoUrl,500)||undefined
-    }
-    state.shareControls.push(asset)
-  }
-
   await saveState(state)
   if(notice)await createNotice(notice).catch(()=>{})
   return NextResponse.json({

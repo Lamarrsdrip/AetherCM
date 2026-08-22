@@ -553,3 +553,6 @@ img,svg,video,canvas{max-width:100%;height:auto}
 .emailConfigHintV2 a{color:#2d6f4b;font-weight:700}
 .newAssetLogoPreviewV2{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
 .newAssetLogoPreviewV2 small{color:var(--muted);font-size:10px}
+.changeLogoRowV2{display:flex;align-items:center;gap:10px;margin-top:6px}
+.changeLogoRowV2 input[type=file]{margin:0;padding:8px;font-size:10px}
+.changeLogoRowV2 small{color:var(--muted);font-size:9px;white-space:nowrap}

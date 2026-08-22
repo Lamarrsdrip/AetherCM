@@ -9,23 +9,45 @@ const cap=(n:number)=>n>=1e12?`$${(n/1e12).toFixed(2)}T`:n>=1e9?`$${(n/1e9).toFi
 
 export default function MarketsAdmin(){
  const [ops,setOps]=useState<any>(null),[saved,setSaved]=useState(""),[query,setQuery]=useState(""),[filter,setFilter]=useState<Filter>("All")
- const [newSymbol,setNewSymbol]=useState(""),[newName,setNewName]=useState(""),[newType,setNewType]=useState<"Stock"|"ETF">("Stock"),[newLogoUrl,setNewLogoUrl]=useState(""),[adding,setAdding]=useState(false),[addMsg,setAddMsg]=useState("")
+ const [newSymbol,setNewSymbol]=useState(""),[newName,setNewName]=useState(""),[newType,setNewType]=useState<"Stock"|"ETF">("Stock")
+ const [newLogoFile,setNewLogoFile]=useState<File|null>(null),[newLogoPreview,setNewLogoPreview]=useState(""),[adding,setAdding]=useState(false),[addMsg,setAddMsg]=useState("")
+ const [logoBusy,setLogoBusy]=useState("")
  useEffect(()=>{fetch("/api/admin/operations").then(r=>r.json()).then(setOps)},[])
+ useEffect(()=>{
+  if(!newLogoFile){setNewLogoPreview("");return}
+  const url=URL.createObjectURL(newLogoFile)
+  setNewLogoPreview(url)
+  return ()=>URL.revokeObjectURL(url)
+ },[newLogoFile])
 
  const save=async(c:ShareControl)=>{
-  const r=await fetch("/api/admin/operations",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"share-control",symbol:c.symbol,patch:{manualPrice:c.manualPrice,marketCap:c.marketCap,enabled:c.enabled,approvalRequired:c.approvalRequired,assetType:c.assetType,category:c.category,description:c.description,logoUrl:c.logoUrl}})})
+  const r=await fetch("/api/admin/operations",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"share-control",symbol:c.symbol,patch:{manualPrice:c.manualPrice,marketCap:c.marketCap,enabled:c.enabled,approvalRequired:c.approvalRequired,assetType:c.assetType,category:c.category,description:c.description}})})
   if(r.ok){setOps(await r.json());setSaved(c.symbol);setTimeout(()=>setSaved(""),1800)}
  }
  const patch=(symbol:string,fields:Partial<ShareControl>)=>setOps({...ops,shareControls:ops.shareControls.map((x:ShareControl)=>x.symbol===symbol?{...x,...fields}:x)})
 
  const addAsset=async()=>{
   if(!newSymbol.trim()){setAddMsg("Enter a ticker symbol.");return}
+  if(!newLogoFile){setAddMsg("Upload a logo image — it's required to list a new asset.");return}
   setAdding(true);setAddMsg("")
-  const r=await fetch("/api/admin/operations",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"add-market-asset",symbol:newSymbol,name:newName,assetType:newType,logoUrl:newLogoUrl})})
+  const fd=new FormData()
+  fd.append("symbol",newSymbol);fd.append("name",newName);fd.append("assetType",newType);fd.append("file",newLogoFile)
+  const r=await fetch("/api/admin/market-logo",{method:"POST",body:fd})
   const d=await r.json()
   setAdding(false)
   if(!r.ok){setAddMsg(d.error||"Could not add asset.");return}
-  setOps(d);setNewSymbol("");setNewName("");setNewLogoUrl("");setAddMsg("Asset added — disabled until you finish configuring it below.")
+  setOps({...ops,shareControls:d.shareControls});setNewSymbol("");setNewName("");setNewLogoFile(null)
+  setAddMsg("Asset added — disabled until you finish configuring it below.")
+ }
+
+ const uploadLogo=async(symbol:string,file:File)=>{
+  setLogoBusy(symbol)
+  const fd=new FormData()
+  fd.append("symbol",symbol);fd.append("file",file)
+  const r=await fetch("/api/admin/market-logo",{method:"POST",body:fd})
+  const d=await r.json()
+  setLogoBusy("")
+  if(r.ok)setOps({...ops,shareControls:d.shareControls})
  }
 
  const filtered=useMemo(()=>{
@@ -45,9 +67,9 @@ export default function MarketsAdmin(){
    <label>Ticker symbol<input value={newSymbol} onChange={e=>setNewSymbol(e.target.value.toUpperCase())} placeholder="e.g. VUG"/></label>
    <label>Name<input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Full company or fund name"/></label>
    <label>Type<select value={newType} onChange={e=>setNewType(e.target.value as any)}><option value="Stock">Stock</option><option value="ETF">ETF</option></select></label>
-   <label>Logo URL (optional)<input value={newLogoUrl} onChange={e=>setNewLogoUrl(e.target.value)} placeholder="Leave blank to use the automatic logo"/></label>
+   <label className="wideV2">Logo (required)<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setNewLogoFile(e.target.files?.[0]||null)}/></label>
   </div>
-  {(newSymbol||newLogoUrl)&&<div className="newAssetLogoPreviewV2"><AssetLogo symbol={newSymbol||"?"} logoUrl={newLogoUrl} assetType={newType}/><small>Logo preview</small></div>}
+  {newLogoPreview&&<div className="newAssetLogoPreviewV2"><img className="assetLogoImg" src={newLogoPreview} width={40} height={40} alt="Logo preview"/><small>Logo preview</small></div>}
   <button className="saveActionV2" onClick={addAsset} disabled={adding}>{adding?"Adding…":"Add asset"}</button>
   {addMsg&&<div className="formInfo">{addMsg}</div>}
  </section>
@@ -65,7 +87,7 @@ export default function MarketsAdmin(){
     <label>Asset type<select value={c.assetType} onChange={e=>patch(c.symbol,{assetType:e.target.value as any})}><option value="Stock">Stock</option><option value="ETF">ETF</option></select></label>
     <label>Category (ETF)<input value={c.category||""} onChange={e=>patch(c.symbol,{category:e.target.value})} placeholder="e.g. Broad U.S. equities"/></label>
     <label className="wideV2">Description<textarea value={c.description||""} onChange={e=>patch(c.symbol,{description:e.target.value})}/></label>
-    <label className="wideV2">Logo URL override<input value={c.logoUrl||""} onChange={e=>patch(c.symbol,{logoUrl:e.target.value})} placeholder="Leave blank to use the automatic logo"/></label>
+    <label className="wideV2">Logo<span className="changeLogoRowV2"><AssetLogo symbol={c.symbol} logoUrl={c.logoUrl} assetType={c.assetType} size={32}/><input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const f=e.target.files?.[0];if(f)uploadLogo(c.symbol,f);e.target.value=""}}/>{logoBusy===c.symbol&&<small>Uploading…</small>}</span></label>
    </div>
    <div className="companyTogglesV2"><label><input type="checkbox" checked={c.enabled} onChange={e=>patch(c.symbol,{enabled:e.target.checked})}/> Available to clients</label><label><input type="checkbox" checked={c.approvalRequired} onChange={e=>patch(c.symbol,{approvalRequired:e.target.checked})}/> Require approval</label></div>
    <button className="saveActionV2" onClick={()=>save(c)}>{saved===c.symbol?"✓ Saved":"Save changes"}</button>
