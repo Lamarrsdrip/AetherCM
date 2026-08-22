@@ -38,6 +38,7 @@ export async function POST(req:Request){
   const state=await loadState()
   const account=ensureAccount(state,email)
   if(account.status==='FROZEN')return NextResponse.json({error:'This account is temporarily unavailable. Please contact Aether Support.'},{status:403})
+  account.lastLoginAt=new Date().toISOString()
   await saveState(state)
 
   const token=await signSession({role:'client',email,userId:account.id})

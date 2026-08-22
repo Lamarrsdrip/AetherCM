@@ -514,3 +514,35 @@ img,svg,video,canvas{max-width:100%;height:auto}
 .holdingCardStats small{display:block;font-size:9px;color:var(--muted);margin-bottom:4px}
 .holdingCardStats b{display:block;font-size:13px}
 @media(max-width:560px){.holdingCardTop{grid-template-columns:auto 1fr}.holdingCardPrice{grid-column:1/-1;text-align:left;margin-top:6px}.holdingCardStats{grid-template-columns:1fr}}
+
+/* === AetherCM profile, settings, support categories === */
+.profileIconBtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:#fff;color:#193e2b}
+.profileHeaderCard{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.profileAvatarImg{width:64px;height:64px;border-radius:50%;object-fit:cover}
+.profileAvatarFallback{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#183f2c;color:#fff;font-weight:800;font-size:20px}
+.profileHeaderCard h2{margin:0;font-size:22px}
+.profileHeaderCard p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.profileRowList{display:grid;padding:6px}
+.profileRowList a,.profileRowList button{display:flex;align-items:center;justify-content:space-between;padding:16px 10px;border-bottom:1px solid #edf0ed;text-decoration:none;color:inherit;border:0;border-bottom:1px solid #edf0ed;background:none;width:100%;text-align:left;font:inherit;cursor:pointer}
+.profileRowList a:last-child,.profileRowList button:last-child{border-bottom:0}
+.profileRowList b{display:block;font-size:14px}
+.profileRowList small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.profileRowList span{color:var(--muted)}
+.profileSignOutRow b{color:#a2454c}
+.notifToggleRow{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #edf0ed;cursor:pointer}
+.notifToggleRow:last-child{border-bottom:0}
+.notifToggleRow b{display:block;font-size:13px}
+.notifToggleRow small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.notifToggleRow input[type=checkbox]{width:40px;height:22px;accent-color:var(--green)}
+.notifToggleLocked{cursor:default}
+.alwaysOnPill{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#7c877f;background:#eef1ee;padding:5px 9px;border-radius:999px}
+.supportCategoryCard{text-align:left;border:0;cursor:pointer;display:flex;flex-direction:column}
+.supportCategoryCard b{font-size:14px}
+.chatCategoryChip{display:flex;align-items:center;gap:8px;margin:0 14px 10px;padding:7px 10px;border-radius:999px;background:#eaf3ed;color:#1f5639;font-size:10px;font-weight:700;width:fit-content}
+.chatCategoryChip button{border:0;background:none;color:inherit;font-size:13px;cursor:pointer}
+.supportCategoryTag{display:inline-block;margin:2px 0;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#2d6f4b;background:#eaf3ed;padding:3px 7px;border-radius:999px}
+.clientProfileGridV2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.clientProfileGridV2 small{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.clientProfileGridV2 b{display:block;font-size:13px}
+@media(max-width:900px){.clientProfileGridV2{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.clientProfileGridV2{grid-template-columns:1fr}.profileHeaderCard{flex-wrap:wrap}}

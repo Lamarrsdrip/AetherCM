@@ -22,7 +22,7 @@ function memory(){
   return globalThis.__aetherNotices
 }
 
-export async function createNotice(opts:{userId:string;title:string;body:string;href?:string;email?:string}){
+export async function createNotice(opts:{userId:string;title:string;body:string;href?:string;email?:string;sendPush?:boolean;sendEmailNotice?:boolean}){
   const notice:Notice={
     id:randomUUID(),userId:opts.userId,title:opts.title,body:opts.body,
     href:opts.href||'/dashboard',read:false,createdAt:new Date().toISOString()
@@ -31,8 +31,8 @@ export async function createNotice(opts:{userId:string;title:string;body:string;
   if(db)await db.collection('notifications').insertOne(notice)
   else memory().unshift(notice)
 
-  await sendPush(opts.userId,{title:opts.title,body:opts.body,url:notice.href}).catch(()=>{})
-  if(opts.email)await sendEmail({to:opts.email,subject:opts.title,title:opts.title,text:opts.body}).catch(()=>{})
+  if(opts.sendPush!==false)await sendPush(opts.userId,{title:opts.title,body:opts.body,url:notice.href}).catch(()=>{})
+  if(opts.sendEmailNotice!==false && opts.email)await sendEmail({to:opts.email,subject:opts.title,title:opts.title,text:opts.body}).catch(()=>{})
   return notice
 }
 

@@ -1,4 +1,11 @@
-export type Account={id:string;email:string;name:string;createdAt:string;status:'ACTIVE'|'FROZEN'}
+export type Address={line1:string;line2?:string;city:string;state?:string;postalCode?:string;country:string}
+export type NotificationPreferences={email:boolean;push:boolean;investmentUpdates:boolean;transferUpdates:boolean;supportReplies:boolean}
+export type Account={
+ id:string;email:string;name:string;createdAt:string;status:'ACTIVE'|'FROZEN';
+ phone?:string;address?:Address;avatarUrl?:string;updatedAt?:string;lastLoginAt?:string;
+ notificationPreferences?:NotificationPreferences
+}
+export const defaultNotificationPreferences:NotificationPreferences={email:true,push:true,investmentUpdates:true,transferUpdates:true,supportReplies:true}
 export type ShareAllocation={id:string;userId:string;userName:string;symbol:string;name:string;requestedAmount:number;shares:number;price:number;value:number;status:'Pending'|'Approved'|'Rejected';createdAt:string;approvedAt?:string;purchasedAt?:string}
 export type AdjustmentKind='Credit'|'Debit'|'Scheduled daily gain'|'Daily Profit'|'Daily Loss'|'Account Credit'|'Account Debit'
 export type AccountAdjustment={id:string;userId:string;userName:string;amount:number;kind:AdjustmentKind;note:string;createdAt:string}

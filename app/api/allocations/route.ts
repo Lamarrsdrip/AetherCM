@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { assertTrustedOrigin } from '@/lib/security'
-import { loadState, saveState, ensureAccount, availableToAllocate } from '@/lib/store'
+import { loadState, saveState, ensureAccount, availableToAllocate, notifyFlags } from '@/lib/store'
 import { createNotice } from '@/lib/notify'
 import { sendEmail } from '@/lib/email'
 
@@ -36,7 +36,7 @@ export async function POST(req:Request){
   state.allocations.unshift(item)
   await saveState(state)
 
-  await createNotice({userId:account.id,title:'Investment request received',body:`Your ${ctl.symbol} request for $${amount.toLocaleString()} has been received.`,href:'/portfolio'}).catch(()=>{})
+  await createNotice({userId:account.id,title:'Investment request received',body:`Your ${ctl.symbol} request for $${amount.toLocaleString()} has been received.`,href:'/portfolio',...notifyFlags(account,'investmentUpdates')}).catch(()=>{})
   if(process.env.SUPPORT_EMAIL)await sendEmail({to:process.env.SUPPORT_EMAIL,subject:'Investment request received',title:'Investment request',text:`${account.name} requested $${amount.toLocaleString()} of ${ctl.symbol}.`}).catch(()=>{})
   return NextResponse.json({ok:true,item,available:availableToAllocate(state,account.id)})
 }

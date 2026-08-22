@@ -23,6 +23,15 @@ export default function ClientsAdmin(){
   else setMsg(d.error||"Could not apply this change.")
  }
  return <AdminShell><section className="adminPageV2"><div className="pageHeadV2"><div><span>Clients</span><h1>Client accounts</h1><p>Real created accounts only. New accounts begin at $0.</p></div></div><section className="adminSectionCardV2"><div className="clientListV2">{ops?.accounts?.map((a:Account)=><button key={a.id} onClick={()=>setClient(a.id)} className={client===a.id?"selected":""}><span>{a.name.slice(0,2).toUpperCase()}</span><div><b>{a.name}</b><small>{a.email}</small></div><strong>{a.status}</strong></button>)}</div></section>
+ {selected&&<section className="adminSectionCardV2"><div className="sectionTitleV2"><div><h2>{selected.name}</h2><p>Client ID {selected.id}</p></div></div>
+  <div className="clientProfileGridV2">
+   <div><small>Email</small><b>{selected.email}</b></div>
+   <div><small>Phone</small><b>{selected.phone||"Not provided"}</b></div>
+   <div><small>Address</small><b>{selected.address?`${selected.address.line1}${selected.address.city?`, ${selected.address.city}`:""}${selected.address.country?`, ${selected.address.country}`:""}`:"Not provided"}</b></div>
+   <div><small>Joined</small><b>{new Date(selected.createdAt).toLocaleDateString('en-US',{month:"long",day:"numeric",year:"numeric"})}</b></div>
+   <div><small>Last sign-in</small><b>{selected.lastLoginAt?new Date(selected.lastLoginAt).toLocaleString('en-US'):"—"}</b></div>
+  </div>
+ </section>}
  {selected&&<section className="adminSectionCardV2"><div className="sectionTitleV2"><div><h2>Adjust {selected.name}'s balance</h2><p>This creates a real, stored account ledger entry.</p></div></div>
   <div className="contentFormV2">
    <label>Action<select value={kind} onChange={e=>setKind(e.target.value as any)}><option value="Daily Profit">Daily Profit</option><option value="Daily Loss">Daily Loss</option><option value="Account Credit">Account Credit</option><option value="Account Debit">Account Debit</option></select></label>

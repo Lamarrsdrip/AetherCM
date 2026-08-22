@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { assertTrustedOrigin, cleanText } from '@/lib/security'
 import { allSupportMessages, addSupportMessage } from '@/lib/support'
-import { loadState, accountById } from '@/lib/store'
+import { loadState, accountById, notifyFlags } from '@/lib/store'
 import { createNotice } from '@/lib/notify'
 
 export async function GET(){
@@ -20,6 +20,7 @@ export async function POST(req:Request){
   const state=await loadState(),account=accountById(state,userId)
   if(!account)return NextResponse.json({error:'Client account not found.'},{status:404})
   const message=await addSupportMessage({userId:account.id,userName:account.name,email:account.email,from:'team',text})
-  await createNotice({userId:account.id,title:'Aether Support replied',body:text.slice(0,140),href:'/support',email:account.email}).catch(()=>{})
+  const flags=notifyFlags(account,'supportReplies')
+  await createNotice({userId:account.id,title:'Aether Support replied',body:text.slice(0,140),href:'/support',email:account.email,...flags}).catch(()=>{})
   return NextResponse.json({ok:true,message})
 }

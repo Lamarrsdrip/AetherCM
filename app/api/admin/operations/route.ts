@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { assertTrustedOrigin, cleanText } from '@/lib/security'
-import { loadState, saveState, sweepExpiredCryptoRequests, accountById, ensureDailyWindow } from '@/lib/store'
+import { loadState, saveState, sweepExpiredCryptoRequests, accountById, ensureDailyWindow, notifyFlags } from '@/lib/store'
 import { createNotice } from '@/lib/notify'
 import type { AdjustmentKind, ShareControl } from '@/lib/ops'
 
@@ -21,7 +21,7 @@ export async function POST(req:Request){
   if(!await admin())return NextResponse.json({error:'Administrator access required.'},{status:401})
   try{assertTrustedOrigin(req)}catch{return NextResponse.json({error:'Please refresh and try again.'},{status:403})}
   const b=await req.json().catch(()=>({})),state=await loadState()
-  let notice:{userId:string;title:string;body:string;href:string;email?:string}|null=null
+  let notice:{userId:string;title:string;body:string;href:string;email?:string;sendPush?:boolean;sendEmailNotice?:boolean}|null=null
 
   if(b.action==='allocation-status'){
     const found=state.allocations.find(a=>a.id===b.id)
@@ -37,7 +37,7 @@ export async function POST(req:Request){
           found.purchasedAt=now
         }
         const account=accountById(state,found.userId)
-        notice={userId:found.userId,title:`Investment request ${String(b.status).toLowerCase()}`,body:`Your ${found.symbol} investment request is now ${String(b.status).toLowerCase()}.`,href:'/portfolio',email:account?.email}
+        notice={userId:found.userId,title:`Investment request ${String(b.status).toLowerCase()}`,body:`Your ${found.symbol} investment request is now ${String(b.status).toLowerCase()}.`,href:'/portfolio',email:account?.email,...(account?notifyFlags(account,'investmentUpdates'):{})}
       }
     }
   }
@@ -46,7 +46,7 @@ export async function POST(req:Request){
     if(found){
       found.status=b.status
       const account=accountById(state,found.userId)
-      notice={userId:found.userId,title:`${found.direction} ${String(b.status).toLowerCase()}`,body:`Your ${found.direction.toLowerCase()} request for $${found.amount.toLocaleString()} is now ${String(b.status).toLowerCase()}.`,href:'/transfers',email:account?.email}
+      notice={userId:found.userId,title:`${found.direction} ${String(b.status).toLowerCase()}`,body:`Your ${found.direction.toLowerCase()} request for $${found.amount.toLocaleString()} is now ${String(b.status).toLowerCase()}.`,href:'/transfers',email:account?.email,...(account?notifyFlags(account,'transferUpdates'):{})}
     }
   }
   if(b.action==='adjust-balance'){
@@ -61,7 +61,8 @@ export async function POST(req:Request){
     const amount=(kind==='Daily Loss'||kind==='Account Debit')?-rawAmount:rawAmount
     state.adjustments.unshift({id:`ADJ-${Date.now()}`,userId:account.id,userName:account.name,amount,kind,note:cleanText(b.note,180)||'Account adjustment',createdAt:new Date().toISOString()})
     const label=kind==='Daily Profit'?'Daily profit':kind==='Daily Loss'?'Daily loss':kind==='Account Credit'?'Account credit':'Account debit'
-    notice={userId:account.id,title:`${label} applied`,body:`${label}: ${amount>0?'+':''}$${Math.abs(amount).toLocaleString()}.`,href:'/dashboard',email:account.email}
+    const category=(kind==='Daily Profit'||kind==='Daily Loss')?'investmentUpdates':'transferUpdates'
+    notice={userId:account.id,title:`${label} applied`,body:`${label}: ${amount>0?'+':''}$${Math.abs(amount).toLocaleString()}.`,href:'/dashboard',email:account.email,...notifyFlags(account,category)}
   }
   if(b.action==='daily-gain'){
     state.dailyGain={...state.dailyGain,...b.rule,value:b.rule?.value===undefined?state.dailyGain.value:Number(b.rule.value)}

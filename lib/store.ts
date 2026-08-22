@@ -157,6 +157,20 @@ export function accountById(state:AppState,userId:string){
   return state.accounts.find(a=>a.id===userId)
 }
 
+/**
+ * Resolves whether a notice to this account should actually push/email, based on
+ * that account's stored notification preferences (missing prefs default to all-on,
+ * matching the app's existing always-notify behavior for accounts that predate this setting).
+ */
+export function notifyFlags(account:Account,category:'investmentUpdates'|'transferUpdates'|'supportReplies'){
+  const prefs=account.notificationPreferences
+  if(!prefs)return {sendPush:true,sendEmailNotice:true}
+  return {
+    sendPush: prefs.push!==false && prefs[category]!==false,
+    sendEmailNotice: prefs.email!==false && prefs[category]!==false
+  }
+}
+
 export function sweepExpiredCryptoRequests(state:AppState){
   const now=Date.now()
   let changed=false

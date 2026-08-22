@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './db'
 
+export type SupportCategory='ACCOUNT_ACCESS'|'MONEY'|'INVESTMENTS'|'ACCOUNT_ACTIVITY'
+
 export type SupportMessage={
   id:string
   userId:string
@@ -8,6 +10,7 @@ export type SupportMessage={
   email:string
   from:'client'|'team'
   text:string
+  category?:SupportCategory
   createdAt:string
 }
 
