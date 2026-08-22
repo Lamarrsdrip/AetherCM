@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react"
 import AppShell from "@/components/AppShell"
 import type {FundingMethod,TransferRequest,ManualCryptoGateway} from "@/lib/ops"
-const money=(n=0)=>n.toLocaleString(undefined,{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2})
+const money=(n=0)=>n.toLocaleString('en-US',{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2})
 function Countdown({expiresAt}:{expiresAt?:string}){const[left,setLeft]=useState(0);useEffect(()=>{const tick=()=>setLeft(expiresAt?Math.max(0,new Date(expiresAt).getTime()-Date.now()):0);tick();const id=setInterval(tick,1000);return()=>clearInterval(id)},[expiresAt]);const m=Math.floor(left/60000),s=Math.floor((left%60000)/1000);return <b className={left>0?"timerLive":"timerExpired"}>{left>0?`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:"Expired"}</b>}
 export default function Transfers(){
  const[methods,setMethods]=useState<FundingMethod[]>([]),[requests,setRequests]=useState<TransferRequest[]>([]),[gateway,setGateway]=useState<ManualCryptoGateway|null>(null),[available,setAvailable]=useState(0)

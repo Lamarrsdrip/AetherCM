@@ -25,10 +25,13 @@ export async function POST(req:Request){
   const shares=Number((amount/ctl.manualPrice).toFixed(6))
   if(shares>ctl.maxShares)return NextResponse.json({error:'This request is above the current share limit.'},{status:400})
 
+  const now=new Date().toISOString()
+  const autoApproved=!ctl.approvalRequired
   const item={
     id:`AL-${Date.now()}`,userId:account.id,userName:account.name,
     symbol:ctl.symbol,name:ctl.name,requestedAmount:amount,shares,price:ctl.manualPrice,value:amount,
-    status:ctl.approvalRequired?'Pending' as const:'Approved' as const,createdAt:new Date().toISOString()
+    status:autoApproved?'Approved' as const:'Pending' as const,createdAt:now,
+    ...(autoApproved?{approvedAt:now,purchasedAt:now}:{})
   }
   state.allocations.unshift(item)
   await saveState(state)

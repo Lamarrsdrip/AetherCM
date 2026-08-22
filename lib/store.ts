@@ -1,11 +1,11 @@
 import {
   initialAccounts, initialAdjustments, initialAllocations, initialDailyGain,
   initialShareControls, initialFundingMethods, initialTransfers,
-  initialCryptoGateway, initialSiteContent,
+  initialCryptoGateway, initialSiteContent, initialCompanyProfile, initialSocialLinks,
   type Account, type AccountAdjustment, type DailyGainRule,
   type ShareAllocation, type ShareControl, type FundingMethod,
   type TransferRequest, type ManualCryptoGateway, type HoldingView,
-  type SiteContent
+  type SiteContent, type CompanyProfile, type SocialLinks, type DailyPerformanceEntry
 } from './ops'
 import { getDb } from './db'
 
@@ -19,7 +19,11 @@ export type AppState = {
   transfers: TransferRequest[]
   cryptoGateway: ManualCryptoGateway
   siteContent: SiteContent
+  companyProfile: CompanyProfile
+  socialLinks: SocialLinks
   lastAccrualDateByUser: Record<string,string>
+  dailyOpeningBalance: Record<string,{date:string,balance:number}>
+  dailyPerformanceHistory: DailyPerformanceEntry[]
 }
 
 declare global {
@@ -41,7 +45,11 @@ function defaultState():AppState {
     transfers: clone(initialTransfers),
     cryptoGateway: clone(initialCryptoGateway),
     siteContent: clone(initialSiteContent),
+    companyProfile: clone(initialCompanyProfile),
+    socialLinks: clone(initialSocialLinks),
     lastAccrualDateByUser: {},
+    dailyOpeningBalance: {},
+    dailyPerformanceHistory: [],
   }
 }
 
@@ -70,9 +78,14 @@ function mergeState(raw?:Partial<AppState>|null):AppState {
     siteContent: {
       ...base.siteContent,
       ...(raw.siteContent || {}),
+      contact: {...base.siteContent.contact, ...(raw.siteContent?.contact || {})},
       offers: base.siteContent.offers.map(x => ({...x, ...(savedOffers.get(x.id) || {})}))
     },
+    companyProfile: {...base.companyProfile, ...(raw.companyProfile || {})},
+    socialLinks: {...base.socialLinks, ...(raw.socialLinks || {})},
     lastAccrualDateByUser: raw.lastAccrualDateByUser || {},
+    dailyOpeningBalance: raw.dailyOpeningBalance || {},
+    dailyPerformanceHistory: raw.dailyPerformanceHistory || [],
   }
 }
 
@@ -177,7 +190,8 @@ export function holdingsFor(state:AppState,userId:string):HoldingView[]{
     return {
       id:a.id,symbol:a.symbol,name:a.name,shares:a.shares,
       costBasis:a.requestedAmount,entryPrice:a.price,currentPrice,previousPrice,
-      marketCap:q?.marketCap||0,currentValue,pnl,pnlPct,dayPnl,dayPct
+      marketCap:q?.marketCap||0,currentValue,pnl,pnlPct,dayPnl,dayPct,
+      purchasedAt:a.purchasedAt||a.approvedAt||a.createdAt
     }
   })
 }
@@ -214,4 +228,55 @@ export function applyDailyAccrualIfDue(state:AppState,userId:string,userName:str
   }
   state.lastAccrualDateByUser[userId]=today
   return true
+}
+
+function todayStr(){
+  return new Date().toISOString().slice(0,10)
+}
+
+function isPerformanceKind(kind:string){
+  return kind==='Daily Profit' || kind==='Daily Loss' || kind==='Scheduled daily gain'
+}
+
+/**
+ * Lazily captures each user's opening balance for "today" and, on first touch of a new
+ * calendar day, finalizes the previous day's total change into dailyPerformanceHistory.
+ * Must run before applying any same-day balance-affecting change so "opening" reflects
+ * the balance BEFORE today's adjustments.
+ */
+export function ensureDailyWindow(state:AppState,userId:string){
+  const today=todayStr()
+  const rec=state.dailyOpeningBalance[userId]
+  if(!rec){
+    state.dailyOpeningBalance[userId]={date:today,balance:accountSnapshotByUser(state,userId).balance}
+    return true
+  }
+  if(rec.date===today)return false
+  const adjTotal=state.adjustments
+    .filter(a=>a.userId===userId && isPerformanceKind(a.kind) && a.createdAt.slice(0,10)===rec.date)
+    .reduce((n,a)=>n+a.amount,0)
+  const marketTotal=holdingsFor(state,userId).reduce((n,h)=>n+h.dayPnl,0)
+  const amount=adjTotal+marketTotal
+  if(amount!==0){
+    const pct=rec.balance>0?amount/rec.balance*100:0
+    state.dailyPerformanceHistory.unshift({
+      id:`DP-${rec.date}-${userId}`,userId,date:rec.date,
+      amount:Number(amount.toFixed(2)),pct:Number(pct.toFixed(2)),createdAt:new Date().toISOString()
+    })
+  }
+  state.dailyOpeningBalance[userId]={date:today,balance:accountSnapshotByUser(state,userId).balance}
+  return true
+}
+
+export function todaysPerformance(state:AppState,userId:string){
+  const today=todayStr()
+  const rec=state.dailyOpeningBalance[userId]
+  const openingBalance=rec && rec.date===today ? rec.balance : accountSnapshotByUser(state,userId).balance
+  const adjToday=state.adjustments
+    .filter(a=>a.userId===userId && isPerformanceKind(a.kind) && a.createdAt.slice(0,10)===today)
+    .reduce((n,a)=>n+a.amount,0)
+  const marketToday=holdingsFor(state,userId).reduce((n,h)=>n+h.dayPnl,0)
+  const amount=adjToday+marketToday
+  const pct=openingBalance>0?amount/openingBalance*100:0
+  return {amount:Number(amount.toFixed(2)),pct:Number(pct.toFixed(2)),openingBalance}
 }

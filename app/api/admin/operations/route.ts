@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { assertTrustedOrigin, cleanText } from '@/lib/security'
-import { loadState, saveState, sweepExpiredCryptoRequests, accountById } from '@/lib/store'
+import { loadState, saveState, sweepExpiredCryptoRequests, accountById, ensureDailyWindow } from '@/lib/store'
 import { createNotice } from '@/lib/notify'
+import type { AdjustmentKind, ShareControl } from '@/lib/ops'
 
 async function admin(){
   const s=await getSession()
@@ -25,9 +26,19 @@ export async function POST(req:Request){
   if(b.action==='allocation-status'){
     const found=state.allocations.find(a=>a.id===b.id)
     if(found){
-      found.status=b.status
-      const account=accountById(state,found.userId)
-      notice={userId:found.userId,title:`Investment request ${String(b.status).toLowerCase()}`,body:`Your ${found.symbol} investment request is now ${String(b.status).toLowerCase()}.`,href:'/portfolio',email:account?.email}
+      const wasPending=found.status==='Pending'
+      if(!wasPending && found.status===b.status){
+        // Already in this state — ignore repeat clicks so we never re-notify or re-stamp timestamps.
+      } else {
+        found.status=b.status
+        if(b.status==='Approved' && wasPending){
+          const now=new Date().toISOString()
+          found.approvedAt=now
+          found.purchasedAt=now
+        }
+        const account=accountById(state,found.userId)
+        notice={userId:found.userId,title:`Investment request ${String(b.status).toLowerCase()}`,body:`Your ${found.symbol} investment request is now ${String(b.status).toLowerCase()}.`,href:'/portfolio',email:account?.email}
+      }
     }
   }
   if(b.action==='transfer-status'){
@@ -39,12 +50,18 @@ export async function POST(req:Request){
     }
   }
   if(b.action==='adjust-balance'){
-    const amount=Number(b.amount||0)
-    if(!Number.isFinite(amount)||amount===0)return NextResponse.json({error:'Enter a non-zero amount.'},{status:400})
+    const rawAmount=Math.abs(Number(b.amount||0))
+    const kind:AdjustmentKind=b.kind
+    const validKinds:AdjustmentKind[]=['Daily Profit','Daily Loss','Account Credit','Account Debit']
+    if(!validKinds.includes(kind))return NextResponse.json({error:'Choose a valid action type.'},{status:400})
+    if(!Number.isFinite(rawAmount)||rawAmount===0)return NextResponse.json({error:'Enter a non-zero amount.'},{status:400})
     const account=accountById(state,b.userId)
     if(!account)return NextResponse.json({error:'Client account not found.'},{status:404})
-    state.adjustments.unshift({id:`ADJ-${Date.now()}`,userId:account.id,userName:account.name,amount,kind:amount>0?'Credit':'Debit',note:cleanText(b.note,180)||'Account adjustment',createdAt:new Date().toISOString()})
-    notice={userId:account.id,title:'Account balance updated',body:`Your account balance has been updated by ${amount>0?'+':''}$${Math.abs(amount).toLocaleString()}.`,href:'/dashboard',email:account.email}
+    ensureDailyWindow(state,account.id)
+    const amount=(kind==='Daily Loss'||kind==='Account Debit')?-rawAmount:rawAmount
+    state.adjustments.unshift({id:`ADJ-${Date.now()}`,userId:account.id,userName:account.name,amount,kind,note:cleanText(b.note,180)||'Account adjustment',createdAt:new Date().toISOString()})
+    const label=kind==='Daily Profit'?'Daily profit':kind==='Daily Loss'?'Daily loss':kind==='Account Credit'?'Account credit':'Account debit'
+    notice={userId:account.id,title:`${label} applied`,body:`${label}: ${amount>0?'+':''}$${Math.abs(amount).toLocaleString()}.`,href:'/dashboard',email:account.email}
   }
   if(b.action==='daily-gain'){
     state.dailyGain={...state.dailyGain,...b.rule,value:b.rule?.value===undefined?state.dailyGain.value:Number(b.rule.value)}
@@ -62,6 +79,19 @@ export async function POST(req:Request){
   if(b.action==='crypto-gateway')state.cryptoGateway={...state.cryptoGateway,...b.patch,paymentWindowMinutes:b.patch?.paymentWindowMinutes===undefined?state.cryptoGateway.paymentWindowMinutes:Number(b.patch.paymentWindowMinutes)}
   if(b.action==='crypto-address')state.cryptoGateway.addresses=state.cryptoGateway.addresses.map(x=>x.id===b.id?{...x,...b.patch,minDeposit:b.patch?.minDeposit===undefined?x.minDeposit:Number(b.patch.minDeposit)}:x)
   if(b.action==='site-content')state.siteContent={...state.siteContent,...b.patch,offers:b.patch?.offers||state.siteContent.offers}
+  if(b.action==='company-profile')state.companyProfile={...state.companyProfile,...b.patch}
+  if(b.action==='social-links')state.socialLinks={...state.socialLinks,...b.patch}
+  if(b.action==='add-market-asset'){
+    const symbol=String(b.symbol||'').trim().toUpperCase()
+    if(!symbol)return NextResponse.json({error:'Enter a ticker symbol.'},{status:400})
+    if(state.shareControls.some(x=>x.symbol===symbol))return NextResponse.json({error:'That symbol already exists.'},{status:400})
+    const asset:ShareControl={
+      symbol,name:cleanText(b.name,120)||symbol,enabled:false,manualPrice:0,previousPrice:0,marketCap:0,
+      allocationCapPct:25,minAmount:100,maxAmount:50000,maxShares:1000,approvalRequired:true,
+      assetType:b.assetType==='ETF'?'ETF':'Stock',category:cleanText(b.category,80),description:cleanText(b.description,400)
+    }
+    state.shareControls.push(asset)
+  }
 
   await saveState(state)
   if(notice)await createNotice(notice).catch(()=>{})

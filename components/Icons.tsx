@@ -11,6 +11,8 @@ export const Icon = ({name, size=20}:{name:string,size?:number}) => {
   chat:<><path d="M21 15a4 4 0 01-4 4H8l-5 3 1.5-4A7 7 0 013 12a7 7 0 017-7h4a7 7 0 017 7v3z"/></>,
   plus:<><path d="M12 5v14M5 12h14"/></>,
   send:<><path d="M22 2L9 15"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></>,
+  stockAsset:<><path d="M4 18l5-6 4 3 7-9"/><path d="M14 6h6v6"/><circle cx="12" cy="12" r="9.5"/></>,
+  etfAsset:<><rect x="4" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></>,
  }
  return <svg {...common}>{p[name] || p.spark}</svg>
 }

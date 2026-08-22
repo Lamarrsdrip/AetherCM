@@ -6,8 +6,9 @@ import NotificationCenter from '@/components/NotificationCenter'
 
 const nav=[
  ['/admin','Overview','⌂'],['/admin/clients','Clients','👤'],['/admin/markets','Markets & prices','◫'],
- ['/admin/allocations','Allocations','✓'],['/admin/funding','Funding','↕'],['/admin/support','Support','◌'],
- ['/admin/content','Homepage','✎'],['/admin/communications','Messages & alerts','●']
+ ['/admin/allocations','Allocations','✓'],['/admin/funding','Funding','↕'],['/admin/performance','Performance','◔'],
+ ['/admin/support','Messages','◌'],['/admin/contact','Contact requests','✉'],['/admin/documents','Documents','▤'],
+ ['/admin/content','Homepage','✎'],['/admin/settings','Settings','⚙'],['/admin/communications','Communications','●']
 ]
 export default function AdminShell({children}:{children:React.ReactNode}){
  const p=usePathname()

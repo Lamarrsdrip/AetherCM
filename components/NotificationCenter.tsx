@@ -13,6 +13,6 @@ export default function NotificationCenter(){
   }
   return <div className="noticeWrap">
     <button className="noticeBell" onClick={()=>{setOpen(!open);if(!open)load()}} aria-label="Account notifications">♡{unread>0&&<span>{unread>9?'9+':unread}</span>}</button>
-    {open&&<div className="noticePanel"><div className="noticeHead"><b>Account updates</b><button onClick={()=>setOpen(false)}>×</button></div><div className="noticeList">{items.length?items.map(n=><button key={n.id} className={n.read?'':'unread'} onClick={()=>read(n)}><b>{n.title}</b><span>{n.body}</span><small>{new Date(n.createdAt).toLocaleString()}</small></button>):<div className="noticeEmpty">You’re all caught up.</div>}</div></div>}
+    {open&&<div className="noticePanel"><div className="noticeHead"><b>Account updates</b><button onClick={()=>setOpen(false)}>×</button></div><div className="noticeList">{items.length?items.map(n=><button key={n.id} className={n.read?'':'unread'} onClick={()=>read(n)}><b>{n.title}</b><span>{n.body}</span><small>{new Date(n.createdAt).toLocaleString('en-US')}</small></button>):<div className="noticeEmpty">You’re all caught up.</div>}</div></div>}
   </div>
 }
